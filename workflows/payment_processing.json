@@ -1,0 +1,61 @@
+{
+  "createTime": 1786393187435,
+  "updateTime": 1786401693339,
+  "name": "payment_processing",
+  "description": "Charges the customer's payment method via a payment gateway. Called as a SUB_WORKFLOW from customer_order_workflow.",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "charge_payment",
+      "taskReferenceName": "charge_payment_ref",
+      "inputParameters": {
+        "http_request": {
+          "body": {
+            "amount": "${workflow.input.amount}",
+            "orderId": "${workflow.input.orderId}"
+          },
+          "connectionTimeOut": 5000,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "method": "POST",
+          "readTimeOut": 5000,
+          "uri": "${workflow.env.inventoryBaseUrl}/charge"
+        }
+      },
+      "type": "HTTP",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [
+    "orderId",
+    "amount",
+    "paymentGatewayUrl"
+  ],
+  "outputParameters": {
+    "status": "${charge_payment_ref.output.response.body.status}",
+    "transactionId": "${charge_payment_ref.output.response.body.transactionId}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 300,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

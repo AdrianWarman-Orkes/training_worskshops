@@ -1,0 +1,23 @@
+{
+  "name": "support_reply_agent",
+  "model": "OpenAI/gpt-4o-mini",
+  "instructions": "Draft a short customer support reply confirming an order.",
+  "strategy": "handoff",
+  "guardrails": [
+    {
+      "name": "no_pii",
+      "guardrailType": "regex",
+      "position": "output",
+      "onFail": "retry",
+      "maxRetries": 3,
+      "patterns": [
+        "[\\w.+-]+@[\\w-]+\\.[\\w.-]+"
+      ],
+      "mode": "block",
+      "message": "Response must not contain email addresses."
+    }
+  ],
+  "maxTurns": 10,
+  "timeoutSeconds": 120,
+  "external": false
+}

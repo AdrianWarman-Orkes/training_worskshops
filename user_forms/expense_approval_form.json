@@ -1,0 +1,136 @@
+{
+  "createTime": 1786666527237,
+  "updateTime": 1786666527237,
+  "createdBy": "USER:app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "updatedBy": "USER:app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "name": "expense_approval_form",
+  "version": 1,
+  "jsonSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "type": "object",
+    "properties": {
+      "expenseAmount": {
+        "type": "number"
+      },
+      "expenseCategory": {
+        "type": "string"
+      },
+      "expenseDescription": {
+        "type": "string"
+      },
+      "receiptText": {
+        "type": "string"
+      },
+      "aiRecommendation": {
+        "type": "string",
+        "enum": [
+          "approve",
+          "flag"
+        ]
+      },
+      "aiReasoning": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "string",
+        "enum": [
+          "approve",
+          "reject"
+        ]
+      },
+      "comments": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "decision"
+    ]
+  },
+  "templateUI": {
+    "type": "VerticalLayout",
+    "elements": [
+      {
+        "type": "Group",
+        "label": "Expense Details",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/expenseAmount",
+            "label": "Amount",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/expenseCategory",
+            "label": "Category",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/expenseDescription",
+            "label": "Description",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/receiptText",
+            "label": "Receipt",
+            "options": {
+              "readonly": true,
+              "multi": true
+            }
+          }
+        ]
+      },
+      {
+        "type": "Group",
+        "label": "AI Assessment",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/aiRecommendation",
+            "label": "AI Recommendation",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/aiReasoning",
+            "label": "AI Reasoning",
+            "options": {
+              "readonly": true,
+              "multi": true
+            }
+          }
+        ]
+      },
+      {
+        "type": "Group",
+        "label": "Your Decision",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/decision",
+            "label": "Decision",
+            "options": {
+              "format": "radio"
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/comments",
+            "label": "Comments (optional)",
+            "options": {}
+          }
+        ]
+      }
+    ]
+  }
+}

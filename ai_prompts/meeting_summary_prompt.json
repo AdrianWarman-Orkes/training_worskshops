@@ -1,0 +1,26 @@
+{
+  "createTime": 1786666149036,
+  "updateTime": 1786666457035,
+  "createdBy": "app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "updatedBy": "app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "name": "meeting_summary_prompt",
+  "template": "You are a meeting-notes summarizer. Read the transcript below and return JSON with keys summary (a one-paragraph string), key_points (an array of short strings), and action_items (an array of short strings, each naming the owner if mentioned). Return valid JSON only, no markdown fences.\n\nTranscript:\n${transcript}",
+  "description": "Summarizes a meeting transcript into structured JSON",
+  "variables": [
+    "transcript"
+  ],
+  "integrations": [
+    "OpenAI:gpt-4o-mini"
+  ],
+  "tags": [
+    {
+      "key": "ai",
+      "value": "patterns"
+    }
+  ],
+  "version": 1,
+  "temperature": 0.1,
+  "topP": 1,
+  "responseFormat": "text",
+  "stopWords": []
+}

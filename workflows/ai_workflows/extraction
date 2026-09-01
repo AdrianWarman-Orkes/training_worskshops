@@ -1,0 +1,77 @@
+{
+  "createTime": 1786666755441,
+  "updateTime": 1786724718512,
+  "name": "ai_pattern_extraction",
+  "description": "AI Workflow Pattern: Extraction. A single LLM_CHAT_COMPLETE task pulls structured order fields straight out of a freeform customer email -- no file, no parsing step, unlike the Document Processing pattern.",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "set_variable",
+      "taskReferenceName": "set_variable_ref",
+      "inputParameters": {
+        "email": "Hi, I need to order 3 units of SKU WD-4471 shipped to 88 Ocean Ave, Santa Monica CA 90401 as soon as possible, ideally by next Friday."
+      },
+      "type": "SET_VARIABLE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "extract_order_details",
+      "taskReferenceName": "extract_order_details_ref",
+      "inputParameters": {
+        "jsonOutput": true,
+        "llmProvider": "OpenAI",
+        "messages": [
+          {
+            "message": "You extract order details from a freeform customer email. Respond with a json object: {sku, quantity, shippingAddress, requestedDate}. Use null for any field not present in the email.",
+            "role": "system"
+          },
+          {
+            "role": "user",
+            "message": "Extract the order details as json from this email:\n\n${workflow.variables.email}"
+          }
+        ],
+        "model": "gpt-4o-mini",
+        "temperature": 0.1
+      },
+      "type": "LLM_CHAT_COMPLETE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [],
+  "outputParameters": {
+    "orderDetails": "${extract_order_details_ref.output.result}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

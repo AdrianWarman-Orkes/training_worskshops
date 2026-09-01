@@ -1,0 +1,174 @@
+{
+  "createTime": 1786666816326,
+  "updateTime": 0,
+  "name": "ai_pattern_approval_assistant",
+  "description": "AI Workflow Pattern: Approval Assistant. An LLM checks an expense against policy and recommends approve/flag with reasoning, then a HUMAN task shows the original expense plus the AI's recommendation to a real approver, who makes the final call.",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "stringify_expense",
+      "taskReferenceName": "stringify_expense_ref",
+      "inputParameters": {
+        "amount": "${workflow.input.expenseAmount}",
+        "category": "${workflow.input.expenseCategory}",
+        "description": "${workflow.input.expenseDescription}",
+        "queryExpression": "{amount: .amount, category: .category, description: .description, receiptText: .receiptText} | tojson",
+        "receiptText": "${workflow.input.receiptText}"
+      },
+      "type": "JSON_JQ_TRANSFORM",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "assess_expense",
+      "taskReferenceName": "assess_expense_ref",
+      "inputParameters": {
+        "jsonOutput": true,
+        "llmProvider": "OpenAI",
+        "messages": [
+          {
+            "message": "You are an expense-policy assistant. Company policy: expenses under $100 auto-approve; $100-$500 need review if category is Travel or Equipment; over $500 always needs review; alcohol or gifts always need review regardless of amount. Given the expense, respond with a json object: {recommendation: 'approve' or 'flag', reasoning}.",
+            "role": "system"
+          },
+          {
+            "message": "Assess this expense as json:\n\n${stringify_expense_ref.output.result}",
+            "role": "user"
+          }
+        ],
+        "model": "gpt-4o-mini",
+        "temperature": 0.1
+      },
+      "type": "LLM_CHAT_COMPLETE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "human_review",
+      "taskReferenceName": "human_review_ref",
+      "inputParameters": {
+        "__humanTaskDefinition": {
+          "assignments": [
+            {
+              "assignee": {
+                "user": "adrian.warman@orkes.io",
+                "userType": "CONDUCTOR_USER"
+              }
+            }
+          ],
+          "displayName": "Review expense: ${workflow.input.expenseDescription}",
+          "userFormTemplate": {
+            "name": "expense_approval_form",
+            "version": 1
+          }
+        },
+        "aiReasoning": "${assess_expense_ref.output.result.reasoning}",
+        "aiRecommendation": "${assess_expense_ref.output.result.recommendation}",
+        "expenseAmount": "${workflow.input.expenseAmount}",
+        "expenseCategory": "${workflow.input.expenseCategory}",
+        "expenseDescription": "${workflow.input.expenseDescription}",
+        "receiptText": "${workflow.input.receiptText}"
+      },
+      "type": "HUMAN",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "final_switch",
+      "taskReferenceName": "final_switch_ref",
+      "inputParameters": {
+        "decision": "${human_review_ref.output.decision}"
+      },
+      "type": "SWITCH",
+      "decisionCases": {
+        "approve": []
+      },
+      "defaultCase": [
+        {
+          "name": "terminate_rejected",
+          "taskReferenceName": "terminate_rejected_ref",
+          "inputParameters": {
+            "terminationReason": "Expense rejected by approver",
+            "terminationStatus": "FAILED"
+          },
+          "type": "TERMINATE",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        }
+      ],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "evaluatorType": "value-param",
+      "expression": "decision",
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [
+    "expenseAmount",
+    "expenseCategory",
+    "expenseDescription",
+    "receiptText"
+  ],
+  "outputParameters": {
+    "aiRecommendation": "${assess_expense_ref.output.result.recommendation}",
+    "comments": "${human_review_ref.output.comments}",
+    "decision": "${human_review_ref.output.decision}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "e023dbdf-7f2d-4903-adb8-69745d0b7c4a@apps.orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

@@ -1,0 +1,80 @@
+{
+  "createTime": 1786666737090,
+  "updateTime": 1786724644440,
+  "name": "ai_pattern_summarization",
+  "description": "AI Workflow Pattern: Summarization. A single LLM_CHAT_COMPLETE task references the server-stored meeting_summary_prompt (Definitions > AI Prompts) instead of inlining prompt text, and returns a structured summary.",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "set_variable",
+      "taskReferenceName": "set_variable_ref",
+      "inputParameters": {
+        "transcript": "Alex: Alright, let's get into the Q3 planning sync. Agenda today is billing API status, the mobile crash issue, hiring, and the Q3 roadmap doc. Priya, want to start us off?\\nPriya: Sure. The new billing API is functionally done. We finished integration testing yesterday and  everything passed except one edge case around partial refunds.\\nAlex: How bad is the partial refund bug?\\nPriya: Not terrible, but it double-counts tax on partial refunds above $200. I have a fix drafted, just needs a code review.\\nAlex: Okay, can you get that reviewed today and ping security  for their review too? We need this live before the Friday deploy freeze.\\nPriya: Yes, I'll ask Marcus to review the code this afternoon and I'll  message the security team right after this call.\\nAlex: Perfect. Jordan, how's the mobile crash situation?\\nJordan: Still not great. Crash rate is  up to 4.2% since the last release, mostly on Android 12 devices. We think it's related to the new image compression library.\\nAlex: Do we have a fix, or are we looking at a rollback?\\nJordan: We don't have a fix yet. My team's been debugging since yesterday but no root cause confirmed. I  think we should plan to roll back tomorrow morning at 9am unless we get a confirmed fix tonight.\\nAlex: Agreed, let's not drag this out. Jordan,  you own the rollback decision — send an update tonight either way so the on-call team knows what's happening.\\nJordan: Will do. I'll post in the  incidents channel by 8pm.\\nAlex: Thanks. Switching gears, hiring update — Sam, where are we on the two open backend roles?\\nSam: We have three  candidates through onsite for the senior role. Panel feedback was strong for two of them. I want to get an offer out to our top choice, Elena, by  end of week.\\nAlex: Any blockers on the offer?\\nSam: Just need finance to confirm the comp band, I'm following up with them today.\\nAlex: Great,  keep us posted. For the second role, the mid-level one, we're still pretty thin on the pipeline.\\nSam: Yeah, only two applicants so far. I'm going to ask the team for referrals again and also open it up to the contractor pool.\\nAlex: Sounds good. Last item — the Q3 roadmap doc needs to go to the board Thursday. I'll write the first draft today and share it by end of day tomorrow for everyone to comment on.\\nPriya: Can you make sure the billing API timeline reflects the refund fix delay? I don't want the board thinking it's already fully shipped.\\nAlex: Good call, I'll flag it as 95% done pending the fix. Anything else before we wrap?\\nJordan: Just a heads up, if we do roll back tomorrow, that'll push the next feature release out by about a week.\\nAlex: Noted, I'll mention that in the roadmap doc too. Okay, thanks everyone, let's regroup Thursday morning before the board meeting."
+      },
+      "type": "SET_VARIABLE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "summarize",
+      "taskReferenceName": "summarize_ref",
+      "inputParameters": {
+        "instructions": "meeting_summary_prompt",
+        "jsonOutput": true,
+        "llmProvider": "OpenAI",
+        "messages": [
+          {
+            "message": "Summarize the transcript as json now.",
+            "role": "user"
+          }
+        ],
+        "model": "gpt-4o-mini",
+        "promptVariables": {
+          "transcript": "${workflow.variables.transcript}"
+        },
+        "promptVersion": 1,
+        "temperature": 0.1
+      },
+      "type": "LLM_CHAT_COMPLETE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [],
+  "outputParameters": {
+    "action_items": "${summarize_ref.output.result.action_items}",
+    "key_points": "${summarize_ref.output.result.key_points}",
+    "summary": "${summarize_ref.output.result.summary}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

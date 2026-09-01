@@ -1,0 +1,87 @@
+{
+  "createTime": 1786666527536,
+  "updateTime": 1786735913670,
+  "createdBy": "USER:app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "updatedBy": "USER:app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "name": "customer_reply_review_form",
+  "version": 1,
+  "jsonSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "type": "object",
+    "properties": {
+      "customerEmail": {
+        "type": "string"
+      },
+      "draftReply": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "string",
+        "enum": [
+          "approve",
+          "reject"
+        ]
+      },
+      "reviewerNotes": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "decision"
+    ]
+  },
+  "templateUI": {
+    "type": "VerticalLayout",
+    "elements": [
+      {
+        "type": "Group",
+        "label": "Customer Email",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/customerEmail",
+            "label": "Original Message",
+            "options": {
+              "readonly": true,
+              "multi": true
+            }
+          }
+        ]
+      },
+      {
+        "type": "Group",
+        "label": "AI-Drafted Reply — edit as needed",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/draftReply",
+            "label": "Reply",
+            "options": {
+              "multi": true
+            }
+          }
+        ]
+      },
+      {
+        "type": "Group",
+        "label": "Your Decision",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/decision",
+            "label": "Send this reply?",
+            "options": {
+              "format": "radio"
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/reviewerNotes",
+            "label": "Notes (if rejecting, explain what to change)",
+            "options": {}
+          }
+        ]
+      }
+    ]
+  }
+}

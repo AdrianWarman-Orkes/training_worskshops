@@ -1,0 +1,36 @@
+{
+  "name": "confirm_order_event",
+  "event": "gcp_pubsub:GCP_pubSub:orders",
+  "condition": "$.payload.fromWorkflow == true && $.workflowType == \"customer_order_workflow\"",
+  "actions": [
+    {
+      "action": "update_workflow_variables",
+      "expandInlineJSON": true,
+      "update_workflow_variables": {
+        "workflowId": "${workflowInstanceId}",
+        "variables": {
+          "payload": "${payload}",
+          "orderId": "${payload.orderId}"
+        },
+        "appendArray": true
+      }
+    },
+    {
+      "action": "complete_task",
+      "complete_task": {
+        "workflowId": "${workflowInstanceId}",
+        "taskRefName": "${payload.wait_task_ref}",
+        "output": {
+          "event_published": true
+        }
+      },
+      "expandInlineJSON": true
+    }
+  ],
+  "active": true,
+  "evaluatorType": "javascript",
+  "createdBy": "adrian.warman@orkes.io",
+  "tags": [],
+  "description": "confirms event from customer order processing was received ",
+  "orgId": "0000"
+}

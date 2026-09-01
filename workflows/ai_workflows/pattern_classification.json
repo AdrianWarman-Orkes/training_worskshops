@@ -1,0 +1,108 @@
+{
+  "createTime": 1786666685434,
+  "updateTime": 1786724333805,
+  "name": "ai_pattern_classification",
+  "description": "AI Workflow Pattern: Classification. A single LLM_CHAT_COMPLETE task classifies a freeform support ticket into a fixed set of categories, replacing what used to be a brittle keyword-rule engine.",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "set_variable",
+      "taskReferenceName": "set_variable_ref",
+      "inputParameters": {
+        "ticket_1": "I was charged $49.99 twice this month for my subscription — can someone refund the duplicate charge?",
+        "ticket_2": "The mobile app crashes every time I try to upload a photo. This started right after the last update.",
+        "ticket_3": "I forgot my password and the reset email isn't arriving. I need to get back into my account."
+      },
+      "type": "SET_VARIABLE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "classify_ticket",
+      "taskReferenceName": "classify_ticket_ref",
+      "inputParameters": {
+        "jsonOutput": true,
+        "llmProvider": "OpenAI",
+        "messages": [
+          {
+            "message": "You classify customer support tickets. Categories: Billing, Technical, Account, General. Respond with a json object: {category, confidence (0-1), reason}.",
+            "role": "system"
+          },
+          {
+            "role": "user",
+            "message": "Classify this support ticket as json: ${workflow.variables.ticket_1}"
+          }
+        ],
+        "model": "gpt-4o-mini",
+        "temperature": 0.1
+      },
+      "type": "LLM_CHAT_COMPLETE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "switch",
+      "taskReferenceName": "switch_ref",
+      "inputParameters": {
+        "class": "${classify_ticket_ref.output.result.category}"
+      },
+      "type": "SWITCH",
+      "decisionCases": {
+        "Billing": [],
+        "Techincal": [],
+        "Account": [],
+        "General": []
+      },
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "evaluatorType": "value-param",
+      "expression": "class",
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [],
+  "outputParameters": {
+    "category": "${classify_ticket_ref.output.result.category}",
+    "confidence": "${classify_ticket_ref.output.result.confidence}",
+    "reason": "${classify_ticket_ref.output.result.reason}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

@@ -1,0 +1,573 @@
+{
+  "createTime": 0,
+  "updateTime": 1786479655239,
+  "name": "customer_order_workflow",
+  "description": "End-to-end customer order workflow for the workshop's live-build demo: inventory check (HTTP), discount/shipping/approval decision (BUSINESS_RULE), conditional human approval (SWITCH + HUMAN + approve/reject SWITCH), parallel per-item inventory reservation (FORK_JOIN_DYNAMIC), order total math (INLINE), payment (SUB_WORKFLOW), invoice generation (custom worker), dual notifications (FORK_JOIN + SendGrid HTTP using a secret), and a bounded DO_WHILE publish/ack-confirm loop (EVENT + WAIT) so an unconfirmed event gets retried instead of silently completing.",
+  "version": 2,
+  "tasks": [
+    {
+      "name": "check_inventory",
+      "taskReferenceName": "check_inventory_ref",
+      "inputParameters": {
+        "http_request": {
+          "connectionTimeOut": 5000,
+          "method": "GET",
+          "readTimeOut": 5000,
+          "uri": "${workflow.env.inventoryBaseUrl}/availability?orderId=${workflow.input.orderId}"
+        }
+      },
+      "type": "HTTP",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "business_rule",
+      "taskReferenceName": "business_rule_ref",
+      "inputParameters": {
+        "cacheTimeoutMinutes": 1,
+        "executionStrategy": "FIRE_FIRST",
+        "inputColumns": {
+          "category": "${workflow.input.category}",
+          "itemCount": "${workflow.input.itemCount}",
+          "price": "${workflow.input.price}"
+        },
+        "outputColumns": [
+          "discountPercent",
+          "shippingCharge",
+          "requiresApproval"
+        ],
+        "ruleFileLocation": "${workflow.env.ruleFileLocation}"
+      },
+      "type": "BUSINESS_RULE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "switch_approval",
+      "taskReferenceName": "switch_approval_ref",
+      "inputParameters": {
+        "requiresApproval": "${business_rule_ref.output.result.requiresApproval}"
+      },
+      "type": "SWITCH",
+      "decisionCases": {
+        "true": [
+          {
+            "name": "human_approval",
+            "taskReferenceName": "human_approval_ref",
+            "inputParameters": {
+              "__humanTaskDefinition": {
+                "assignments": [
+                  {
+                    "assignee": {
+                      "user": "adrian.warman@orkes.io",
+                      "userType": "CONDUCTOR_USER"
+                    }
+                  }
+                ],
+                "displayName": "Approve order ${workflow.input.orderId}",
+                "userFormTemplate": {
+                  "name": "order_approval_form",
+                  "version": 1
+                }
+              },
+              "category": "${workflow.input.category}",
+              "discountPercent": "${business_rule_ref.output.result.discountPercent}",
+              "itemCount": "${workflow.input.itemCount}",
+              "orderId": "${workflow.input.orderId}",
+              "price": "${workflow.input.price}",
+              "shippingCharge": "${business_rule_ref.output.result.shippingCharge}"
+            },
+            "type": "HUMAN",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "check_approval_decision",
+            "taskReferenceName": "check_approval_decision_ref",
+            "inputParameters": {
+              "decision": "${human_approval_ref.output.decision}"
+            },
+            "type": "SWITCH",
+            "decisionCases": {
+              "approve": []
+            },
+            "defaultCase": [
+              {
+                "name": "terminate",
+                "taskReferenceName": "terminate_order_rejected_ref",
+                "inputParameters": {
+                  "terminationReason": "Order rejected by approver",
+                  "terminationStatus": "COMPLETED"
+                },
+                "type": "TERMINATE",
+                "decisionCases": {},
+                "defaultCase": [],
+                "forkTasks": [],
+                "startDelay": 0,
+                "joinOn": [],
+                "optional": false,
+                "defaultExclusiveJoinTask": [],
+                "asyncComplete": false,
+                "loopOver": [],
+                "onStateChange": {},
+                "permissive": false,
+                "metadata": {}
+              }
+            ],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "evaluatorType": "value-param",
+            "expression": "decision",
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ]
+      },
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "evaluatorType": "value-param",
+      "expression": "requiresApproval",
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "build_reservation_tasks",
+      "taskReferenceName": "build_reservation_tasks_ref",
+      "inputParameters": {
+        "inventoryUrl": "${workflow.env.inventoryBaseUrl}",
+        "items": "${workflow.input.cartItems}",
+        "queryExpression": ". as $root | { \ntasks: [$root.items[] | {name: \"reserve_item\", taskReferenceName: (\"reserve_\" + .sku), type: \"HTTP\"}], \ninputs: ([$root.items[] | {(\"reserve_\" + .sku): {http_request: {uri: ($root.inventoryUrl + \"/reserve/\" + .sku), method: \"POST\", body: {qty: .qty}}}}] | add) \n}"
+      },
+      "type": "JSON_JQ_TRANSFORM",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "reserve_items_fork",
+      "taskReferenceName": "reserve_fork_ref",
+      "inputParameters": {
+        "dynamicTasks": "${build_reservation_tasks_ref.output.result.tasks}",
+        "dynamicTasksInput": "${build_reservation_tasks_ref.output.result.inputs}"
+      },
+      "type": "FORK_JOIN_DYNAMIC",
+      "decisionCases": {},
+      "dynamicForkTasksParam": "dynamicTasks",
+      "dynamicForkTasksInputParamName": "dynamicTasksInput",
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "reserve_items_join",
+      "taskReferenceName": "reserve_join_ref",
+      "inputParameters": {},
+      "type": "JOIN",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "set_order_status",
+      "taskReferenceName": "set_order_status_ref",
+      "inputParameters": {
+        "discountPercent": "${business_rule_ref.output.result.discountPercent}",
+        "orderStatus": "RESERVED",
+        "shippingCharge": "${business_rule_ref.output.result.shippingCharge}"
+      },
+      "type": "SET_VARIABLE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "compute_total",
+      "taskReferenceName": "compute_total_ref",
+      "inputParameters": {
+        "discountPercent": "${workflow.variables.discountPercent}",
+        "evaluatorType": "graaljs",
+        "expression": "(function(){ var discount = $.price * ($.discountPercent / 100.0); return { finalAmount: ($.price - discount + $.shippingCharge) }; })();",
+        "price": "${workflow.input.price}",
+        "shippingCharge": "${workflow.variables.shippingCharge}"
+      },
+      "type": "INLINE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "process_payment",
+      "taskReferenceName": "process_payment_ref",
+      "inputParameters": {
+        "amount": "${compute_total_ref.output.result.finalAmount}",
+        "orderId": "${workflow.input.orderId}",
+        "paymentGatewayUrl": "${workflow.input.paymentGatewayUrl}"
+      },
+      "type": "SUB_WORKFLOW",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "subWorkflowParam": {
+        "name": "payment_processing",
+        "version": 1
+      },
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "generate_invoice",
+      "taskReferenceName": "generate_invoice_ref",
+      "inputParameters": {
+        "finalAmount": "${compute_total_ref.output.result.finalAmount}",
+        "orderId": "${workflow.input.orderId}",
+        "transactionId": "${process_payment_ref.output.transactionId}"
+      },
+      "type": "SIMPLE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "notify_fork",
+      "taskReferenceName": "notify_fork_ref",
+      "inputParameters": {},
+      "type": "FORK_JOIN",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [
+        [
+          {
+            "name": "sendgrid_1",
+            "taskReferenceName": "sendgrid_ref_1",
+            "inputParameters": {
+              "from": "${workflow.env.adrian_work_email}",
+              "to": "${workflow.input.customerEmail}",
+              "subject": "Your order ${workflow.input.orderId} is confirmed",
+              "contentType": "text/plain",
+              "content": "\"Thanks for your order! Invoice ${generate_invoice_ref.output.invoiceNumber}, total ${compute_total_ref.output.result.finalAmount}.\"",
+              "sendgridConfiguration": "sendgrid"
+            },
+            "type": "SENDGRID",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "sendgrid",
+            "taskReferenceName": "sendgrid_ref",
+            "inputParameters": {
+              "from": "${workflow.env.adrian_work_email}",
+              "to": "${workflow.env.adrian_email_1}",
+              "subject": "New order placed: ${workflow.input.orderId}",
+              "contentType": "text/plain",
+              "content": "\"Order ${workflow.input.orderId} placed. Invoice ${generate_invoice_ref.output.invoiceNumber}, total ${compute_total_ref.output.result.finalAmount}.\"",
+              "sendgridConfiguration": "sendgrid"
+            },
+            "type": "SENDGRID",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ]
+      ],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "notify_join",
+      "taskReferenceName": "notify_join_ref",
+      "inputParameters": {},
+      "type": "JOIN",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [
+        "sendgrid_ref",
+        "sendgrid_ref_1"
+      ],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "publish_event_loop",
+      "taskReferenceName": "publish_event_loop_ref",
+      "inputParameters": {
+        "maxIterations": 5,
+        "publish_event_loop_ref": "${publish_event_loop_ref.output}",
+        "waitOutput": "${wait_event_ack_ref.output}"
+      },
+      "type": "DO_WHILE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopCondition": "(function(){ \n  return $.publish_event_loop_ref['iteration'] < $.maxIterations && !($.waitOutput.event_published === true);\n})();",
+      "loopOver": [
+        {
+          "name": "publish_order_event",
+          "taskReferenceName": "publish_order_event_ref",
+          "inputParameters": {
+            "payload": {
+              "workflowInstanceId": "${workflow.workflowId}",
+              "finalAmount": "${compute_total_ref.output.result.finalAmount}",
+              "invoiceNumber": "${generate_invoice_ref.output.invoiceNumber}",
+              "orderId": "${workflow.input.orderId}",
+              "wait_task_ref": "wait_event_ack_ref",
+              "fromWorkflow": true
+            }
+          },
+          "type": "EVENT",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "sink": "gcp_pubsub:GCP_pubSub:orders",
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        },
+        {
+          "name": "wait_event_ack",
+          "taskReferenceName": "wait_event_ack_ref",
+          "inputParameters": {
+            "duration": "15 seconds"
+          },
+          "type": "WAIT",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        }
+      ],
+      "evaluatorType": "graaljs",
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "check_event_confirmed",
+      "taskReferenceName": "check_event_confirmed_ref",
+      "inputParameters": {
+        "eventPublished": "${wait_event_ack_ref.output.event_published}"
+      },
+      "type": "SWITCH",
+      "decisionCases": {
+        "true": []
+      },
+      "defaultCase": [
+        {
+          "name": "terminate",
+          "taskReferenceName": "terminate_ref",
+          "inputParameters": {
+            "terminationStatus": "FAILED",
+            "terminationReason": "Order event was not confirmed published after retries"
+          },
+          "type": "TERMINATE",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        }
+      ],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "evaluatorType": "value-param",
+      "expression": "eventPublished",
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [
+    "orderId",
+    "customerEmail",
+    "category",
+    "price",
+    "itemCount",
+    "cartItems"
+  ],
+  "outputParameters": {
+    "finalAmount": "${compute_total_ref.output.result.finalAmount}",
+    "invoiceNumber": "${generate_invoice_ref.output.invoiceNumber}",
+    "orderId": "${workflow.input.orderId}",
+    "orderStatus": "${workflow.variables.orderStatus}",
+    "paymentStatus": "${process_payment_ref.output.status}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 3600,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

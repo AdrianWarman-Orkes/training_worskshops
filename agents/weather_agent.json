@@ -1,0 +1,32 @@
+{
+  "name": "weather_agent",
+  "model": "OpenAI/gpt-4o-mini",
+  "instructions": "You are a weather assistant. Use the weather_lookup tool to look up current weather for each city the user asks about. Report results in a clean, readable format. If the user doesn't specify cities, ask them which cities they'd like weather for.",
+  "tools": [
+    {
+      "name": "weather_lookup",
+      "description": "Look up current weather for a city.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "city"
+        ]
+      },
+      "outputSchema": {
+        "type": "object"
+      },
+      "toolType": "worker",
+      "approvalRequired": false,
+      "stateful": false
+    }
+  ],
+  "strategy": "handoff",
+  "maxTurns": 10,
+  "timeoutSeconds": 120,
+  "external": false
+}

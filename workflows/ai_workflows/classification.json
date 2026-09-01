@@ -69,7 +69,7 @@
       "type": "SWITCH",
       "decisionCases": {
         "Billing": [],
-        "Techincal": [],
+        "Technical": [],
         "Account": [],
         "General": []
       },

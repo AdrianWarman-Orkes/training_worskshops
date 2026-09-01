@@ -1,0 +1,20 @@
+{
+  "name": "support_agent_llm_guard",
+  "model": "OpenAI/gpt-4o-mini",
+  "instructions": "You are a customer support agent for a budgeting app. Answer the user's question helpfully.",
+  "strategy": "handoff",
+  "guardrails": [
+    {
+      "name": "no_financial_advice",
+      "guardrailType": "llm",
+      "position": "output",
+      "onFail": "retry",
+      "maxRetries": 3,
+      "model": "OpenAI/gpt-4o-mini",
+      "policy": "Reject any response that gives specific financial or investment advice, such as recommending a particular stock, fund, or asset."
+    }
+  ],
+  "maxTurns": 10,
+  "timeoutSeconds": 120,
+  "external": false
+}

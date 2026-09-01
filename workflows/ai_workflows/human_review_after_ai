@@ -1,0 +1,231 @@
+{
+  "createTime": 0,
+  "updateTime": 1786735948224,
+  "name": "ai_pattern_human_review_after_ai",
+  "description": "AI Workflow Pattern: Human Review After AI, v2. Wraps the draft + review step in a bounded DO_WHILE self-correction loop: if the human rejects the draft with a reason, that feedback is threaded back into the next LLM_CHAT_COMPLETE attempt via a workflow variable. Exits on approval or after maxIterations attempts.",
+  "version": 2,
+  "tasks": [
+    {
+      "name": "init_feedback",
+      "taskReferenceName": "init_feedback_ref",
+      "inputParameters": {
+        "priorFeedback": "N/A - first draft"
+      },
+      "type": "SET_VARIABLE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "reply_loop",
+      "taskReferenceName": "reply_loop_ref",
+      "inputParameters": {
+        "decision": "${human_review_draft_ref.output.decision}",
+        "maxIterations": 3,
+        "reply_loop_ref": "${reply_loop_ref.output}"
+      },
+      "type": "DO_WHILE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopCondition": "(function(){ return $.reply_loop_ref['iteration'] < $.maxIterations && $.decision !== 'approve'; })();",
+      "loopOver": [
+        {
+          "name": "draft_reply",
+          "taskReferenceName": "draft_reply_ref",
+          "inputParameters": {
+            "jsonOutput": false,
+            "llmProvider": "OpenAI",
+            "messages": [
+              {
+                "message": "Draft a friendly, concise customer support reply to the email below. Plain text, no subject line, sign off as 'The Support Team'. If prior reviewer feedback is provided and is not 'N/A - first draft', revise your approach based on that feedback instead of repeating the same draft.",
+                "role": "system"
+              },
+              {
+                "message": "Customer email:\n${workflow.input.customerEmail}\n\nPrior reviewer feedback: ${workflow.variables.priorFeedback}",
+                "role": "user"
+              }
+            ],
+            "model": "gpt-4o-mini",
+            "temperature": 0.5
+          },
+          "type": "LLM_CHAT_COMPLETE",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        },
+        {
+          "name": "human_review_draft",
+          "taskReferenceName": "human_review_draft_ref",
+          "inputParameters": {
+            "__humanTaskDefinition": {
+              "assignments": [
+                {
+                  "assignee": {
+                    "user": "adrian.warman@orkes.io",
+                    "userType": "CONDUCTOR_USER"
+                  }
+                }
+              ],
+              "displayName": "Review AI-drafted reply",
+              "userFormTemplate": {
+                "name": "customer_reply_review_form",
+                "version": 1
+              }
+            },
+            "customerEmail": "${workflow.input.customerEmail}",
+            "draftReply": "${draft_reply_ref.output.result}"
+          },
+          "type": "HUMAN",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        },
+        {
+          "name": "update_feedback",
+          "taskReferenceName": "update_feedback_ref",
+          "inputParameters": {
+            "priorFeedback": "${human_review_draft_ref.output.reviewerNotes}"
+          },
+          "type": "SET_VARIABLE",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        }
+      ],
+      "evaluatorType": "graaljs",
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "send_switch",
+      "taskReferenceName": "send_switch_ref",
+      "inputParameters": {
+        "decision": "${human_review_draft_ref.output.decision}"
+      },
+      "type": "SWITCH",
+      "decisionCases": {
+        "approve": [
+          {
+            "name": "mark_sent",
+            "taskReferenceName": "mark_sent_ref",
+            "inputParameters": {
+              "emailStatus": "sent"
+            },
+            "type": "SET_VARIABLE",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ]
+      },
+      "defaultCase": [
+        {
+          "name": "terminate_unapproved",
+          "taskReferenceName": "terminate_unapproved_ref",
+          "inputParameters": {
+            "terminationReason": "Reply not approved after the maximum number of revision attempts -- escalate to a human to write manually.",
+            "terminationStatus": "FAILED"
+          },
+          "type": "TERMINATE",
+          "decisionCases": {},
+          "defaultCase": [],
+          "forkTasks": [],
+          "startDelay": 0,
+          "joinOn": [],
+          "optional": false,
+          "defaultExclusiveJoinTask": [],
+          "asyncComplete": false,
+          "loopOver": [],
+          "onStateChange": {},
+          "permissive": false,
+          "metadata": {}
+        }
+      ],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "evaluatorType": "value-param",
+      "expression": "decision",
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [
+    "customerEmail"
+  ],
+  "outputParameters": {
+    "aiDraft": "${draft_reply_ref.output.result}",
+    "attempts": "${reply_loop_ref.output.iteration}",
+    "decision": "${human_review_draft_ref.output.decision}",
+    "emailStatus": "${workflow.variables.emailStatus}",
+    "finalReply": "${human_review_draft_ref.output.draftReply}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "e023dbdf-7f2d-4903-adb8-69745d0b7c4a@apps.orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

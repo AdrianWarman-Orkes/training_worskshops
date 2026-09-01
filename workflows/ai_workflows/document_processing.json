@@ -1,0 +1,99 @@
+{
+  "createTime": 0,
+  "updateTime": 1786723862711,
+  "name": "ai_pattern_document_processing",
+  "description": "AI Workflow Pattern: Document Processing. Renders an invoice as a real PDF (Generate_PDF), fetches the document (Get_Document), then extracts its text and has an LLM turn it into structured JSON. Demonstrates going from an unstructured file to a structured record in three tasks.",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "generate_invoice_pdf",
+      "taskReferenceName": "generate_invoice_pdf_ref",
+      "inputParameters": {
+        "markdown": "\"# Acme Supply Co. Invoice\\n\\n**Invoice Number:** INV-1042\\n**Invoice Date:** 2026-08-01\\n**Due Date:** 2026-08-31\\n\\n| Item | Qty | Unit Price | Amount |\\n|---|---|---|---|\\n| Widgets | 100 | $2.50 | $250.00 |\\n| Gadgets | 20 | $12.00 | $240.00 |\\n\\n**Total Due: $490.00**\\n\"",
+        "pageSize": "A4"
+      },
+      "type": "GENERATE_PDF",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "extract_invoice_text",
+      "taskReferenceName": "extract_invoice_text_ref",
+      "inputParameters": {
+        "mediaType": "application/pdf",
+        "url": "${generate_invoice_pdf_ref.output.result.location}"
+      },
+      "type": "GET_DOCUMENT",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "extract_invoice_fields",
+      "taskReferenceName": "extract_invoice_fields_ref",
+      "inputParameters": {
+        "jsonOutput": true,
+        "llmProvider": "OpenAI",
+        "messages": [
+          {
+            "message": "You extract structured data from invoice text. Respond with a valid json object only (no markdown fences) with keys: vendor (string), invoiceNumber (string), invoiceDate (string), dueDate (string), lineItems (array of {description, qty, unitPrice, amount}), totalDue (number).",
+            "role": "system"
+          },
+          {
+            "message": "Extract the invoice fields as json from this text:\n\n${extract_invoice_text_ref.output.result}",
+            "role": "user"
+          }
+        ],
+        "model": "gpt-4o-mini",
+        "temperature": 0.1
+      },
+      "type": "LLM_CHAT_COMPLETE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [],
+  "outputParameters": {
+    "invoiceRecord": "${extract_invoice_fields_ref.output.result}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

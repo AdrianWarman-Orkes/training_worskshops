@@ -1,0 +1,91 @@
+name: Register workshop metadata
+
+# Manual only -- this pushes definitions into WHATEVER cluster the repo
+# secrets point at, so it never runs on push/PR. See import/README.md.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get API token
+        id: auth
+        env:
+          CONDUCTOR_SERVER_URL: ${{ secrets.CONDUCTOR_SERVER_URL }}
+          CONDUCTOR_KEY_ID: ${{ secrets.CONDUCTOR_KEY_ID }}
+          CONDUCTOR_KEY_SECRET: ${{ secrets.CONDUCTOR_KEY_SECRET }}
+        run: |
+          set -euo pipefail
+          token=$(curl -sf -X POST "$CONDUCTOR_SERVER_URL/api/token" \
+            -H "Content-Type: application/json" \
+            -d "{\"keyId\":\"$CONDUCTOR_KEY_ID\",\"keySecret\":\"$CONDUCTOR_KEY_SECRET\"}" \
+            | jq -r '.token')
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "Failed to get a token -- check the CONDUCTOR_* secrets." >&2
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Register workflow definitions
+        env:
+          CONDUCTOR_SERVER_URL: ${{ secrets.CONDUCTOR_SERVER_URL }}
+          TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          for f in workflows/customer_order_workflow.json \
+                   workflows/payment_processing.json \
+                   workflows/ai_workflows/*.json; do
+            echo "Registering workflow: $f"
+            jq '[.]' "$f" | curl -sf -X PUT "$CONDUCTOR_SERVER_URL/api/metadata/workflow" \
+              -H "Content-Type: application/json" \
+              -H "X-Authorization: $TOKEN" \
+              -d @-
+          done
+
+      - name: Register event handler
+        env:
+          CONDUCTOR_SERVER_URL: ${{ secrets.CONDUCTOR_SERVER_URL }}
+          TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          curl -sf -X PUT "$CONDUCTOR_SERVER_URL/api/event" \
+            -H "Content-Type: application/json" \
+            -H "X-Authorization: $TOKEN" \
+            -d @event_handlers/confirm_order_event.json
+
+      - name: Register user form templates
+        env:
+          CONDUCTOR_SERVER_URL: ${{ secrets.CONDUCTOR_SERVER_URL }}
+          TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          for f in user_forms/*.json; do
+            echo "Registering user form: $f"
+            curl -sf -X POST "$CONDUCTOR_SERVER_URL/api/human/template?newVersion=false" \
+              -H "Content-Type: application/json" \
+              -H "X-Authorization: $TOKEN" \
+              -d @"$f"
+          done
+
+      - name: Register AI prompts
+        env:
+          CONDUCTOR_SERVER_URL: ${{ secrets.CONDUCTOR_SERVER_URL }}
+          TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          for f in ai_prompts/*.json; do
+            echo "Registering AI prompt: $f"
+            jq '[.]' "$f" | curl -sf -X POST "$CONDUCTOR_SERVER_URL/api/prompts/" \
+              -H "Content-Type: application/json" \
+              -H "X-Authorization: $TOKEN" \
+              -d @-
+          done
+
+      - name: Agents are not registered by this action
+        run: |
+          echo "Skipping agents/ -- those are deployed via the conductor-agent-sdk"
+          echo "scripts in agents/agent_code/*.py, not a REST call. See agents/README.md."

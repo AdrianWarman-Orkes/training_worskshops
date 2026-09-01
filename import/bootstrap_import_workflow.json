@@ -1,0 +1,950 @@
+{
+  "createTime": 0,
+  "updateTime": 0,
+  "name": "import_training_workshops_metadata",
+  "description": "One-shot bootstrap: fetches every workflow, event handler, user form, and AI prompt from the AdrianWarman-Orkes/training_worskshops GitHub repo and registers it in this cluster. Does NOT register the agents/ definitions -- those are deployed via the conductor-agent-sdk scripts in agent_code/ (see agents/README.md).",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "get_conductor_token",
+      "taskReferenceName": "get_token_ref",
+      "inputParameters": {
+        "http_request": {
+          "uri": "${workflow.input.conductorApiUrl}/api/token",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "keyId": "${workflow.input.keyId}",
+            "keySecret": "${workflow.input.keySecret}"
+          },
+          "connectionTimeOut": 5000,
+          "readTimeOut": 10000
+        }
+      },
+      "type": "HTTP",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "register_metadata_fork",
+      "taskReferenceName": "register_metadata_fork_ref",
+      "inputParameters": {},
+      "type": "FORK_JOIN",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [
+        [
+          {
+            "name": "fetch_customer_order_workflow",
+            "taskReferenceName": "fetch_customer_order_workflow_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/customer_order_workflow.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_customer_order_workflow",
+            "taskReferenceName": "register_customer_order_workflow_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_customer_order_workflow_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_payment_processing",
+            "taskReferenceName": "fetch_payment_processing_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/payment_processing.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_payment_processing",
+            "taskReferenceName": "register_payment_processing_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_payment_processing_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_approval_assistant",
+            "taskReferenceName": "fetch_approval_assistant_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/ai_workflows/approval_assistant.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_approval_assistant",
+            "taskReferenceName": "register_approval_assistant_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_approval_assistant_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_classification",
+            "taskReferenceName": "fetch_classification_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/ai_workflows/classification.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_classification",
+            "taskReferenceName": "register_classification_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_classification_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_document_processing",
+            "taskReferenceName": "fetch_document_processing_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/ai_workflows/document_processing.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_document_processing",
+            "taskReferenceName": "register_document_processing_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_document_processing_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_extraction",
+            "taskReferenceName": "fetch_extraction_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/ai_workflows/extraction.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_extraction",
+            "taskReferenceName": "register_extraction_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_extraction_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_human_review_after_ai",
+            "taskReferenceName": "fetch_human_review_after_ai_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/ai_workflows/human_review_after_ai.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_human_review_after_ai",
+            "taskReferenceName": "register_human_review_after_ai_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_human_review_after_ai_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_recommendations",
+            "taskReferenceName": "fetch_recommendations_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/ai_workflows/recommendations.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_recommendations",
+            "taskReferenceName": "register_recommendations_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_recommendations_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_summarization",
+            "taskReferenceName": "fetch_summarization_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/workflows/ai_workflows/summarization.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_summarization",
+            "taskReferenceName": "register_summarization_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/metadata/workflow",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_summarization_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_confirm_order_event",
+            "taskReferenceName": "fetch_confirm_order_event_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/event_handlers/confirm_order_event.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_confirm_order_event",
+            "taskReferenceName": "register_confirm_order_event_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/event",
+                "method": "PUT",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": "${fetch_confirm_order_event_ref.output.response.body}",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_order_approval_form",
+            "taskReferenceName": "fetch_order_approval_form_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/user_forms/order_approval_form.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_order_approval_form",
+            "taskReferenceName": "register_order_approval_form_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/human/template?newVersion=false",
+                "method": "POST",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": "${fetch_order_approval_form_ref.output.response.body}",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_customer_reply_review_form",
+            "taskReferenceName": "fetch_customer_reply_review_form_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/user_forms/customer_reply_review_form.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_customer_reply_review_form",
+            "taskReferenceName": "register_customer_reply_review_form_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/human/template?newVersion=false",
+                "method": "POST",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": "${fetch_customer_reply_review_form_ref.output.response.body}",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_expense_approval_form",
+            "taskReferenceName": "fetch_expense_approval_form_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/user_forms/expense_approval_form.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_expense_approval_form",
+            "taskReferenceName": "register_expense_approval_form_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/human/template?newVersion=false",
+                "method": "POST",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": "${fetch_expense_approval_form_ref.output.response.body}",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ],
+        [
+          {
+            "name": "fetch_meeting_summary_prompt",
+            "taskReferenceName": "fetch_meeting_summary_prompt_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.githubRawBase}/ai_prompts/meeting_summary_prompt.json",
+                "method": "GET",
+                "connectionTimeOut": 5000,
+                "readTimeOut": 5000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          },
+          {
+            "name": "register_meeting_summary_prompt",
+            "taskReferenceName": "register_meeting_summary_prompt_ref",
+            "inputParameters": {
+              "http_request": {
+                "uri": "${workflow.input.conductorApiUrl}/api/prompts/",
+                "method": "POST",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "X-Authorization": "${get_token_ref.output.response.body.token}"
+                },
+                "body": [
+                  "${fetch_meeting_summary_prompt_ref.output.response.body}"
+                ],
+                "connectionTimeOut": 5000,
+                "readTimeOut": 10000
+              }
+            },
+            "type": "HTTP",
+            "decisionCases": {},
+            "defaultCase": [],
+            "forkTasks": [],
+            "startDelay": 0,
+            "joinOn": [],
+            "optional": false,
+            "defaultExclusiveJoinTask": [],
+            "asyncComplete": false,
+            "loopOver": [],
+            "onStateChange": {},
+            "permissive": false,
+            "metadata": {}
+          }
+        ]
+      ],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "register_metadata_join",
+      "taskReferenceName": "register_metadata_join_ref",
+      "inputParameters": {},
+      "type": "JOIN",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [
+        "register_customer_order_workflow_ref",
+        "register_payment_processing_ref",
+        "register_approval_assistant_ref",
+        "register_classification_ref",
+        "register_document_processing_ref",
+        "register_extraction_ref",
+        "register_human_review_after_ai_ref",
+        "register_recommendations_ref",
+        "register_summarization_ref",
+        "register_confirm_order_event_ref",
+        "register_order_approval_form_ref",
+        "register_customer_reply_review_form_ref",
+        "register_expense_approval_form_ref",
+        "register_meeting_summary_prompt_ref"
+      ],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [
+    "conductorApiUrl",
+    "keyId",
+    "keySecret",
+    "githubRawBase"
+  ],
+  "outputParameters": {
+    "registered": [
+      "register_customer_order_workflow_ref",
+      "register_payment_processing_ref",
+      "register_approval_assistant_ref",
+      "register_classification_ref",
+      "register_document_processing_ref",
+      "register_extraction_ref",
+      "register_human_review_after_ai_ref",
+      "register_recommendations_ref",
+      "register_summarization_ref",
+      "register_confirm_order_event_ref",
+      "register_order_approval_form_ref",
+      "register_customer_reply_review_form_ref",
+      "register_expense_approval_form_ref",
+      "register_meeting_summary_prompt_ref"
+    ]
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 300,
+  "variables": {},
+  "inputTemplate": {
+    "githubRawBase": "https://raw.githubusercontent.com/AdrianWarman-Orkes/training_worskshops/main"
+  },
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": [
+    "keySecret"
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "createTime": 1786666787177,
+  "updateTime": 1786724824037,
+  "name": "ai_pattern_recommendations",
+  "description": "AI Workflow Pattern: Recommendations. Stringifies the customer profile and catalog with JSON_JQ_TRANSFORM (avoiding the Java toString gotcha), then an LLM reasons over both to produce ranked, justified recommendations.",
+  "version": 1,
+  "tasks": [
+    {
+      "name": "set_variable",
+      "taskReferenceName": "set_variable_ref",
+      "inputParameters": {
+        "catalog": [
+          {
+            "product": "Carbon Trekking Poles",
+            "category": "trail running"
+          },
+          {
+            "product": "GPS Running Watch",
+            "category": "trail running"
+          },
+          {
+            "product": "Cotton Gym T-Shirt",
+            "category": "gym"
+          },
+          {
+            "product": "Ultralight Rain Shell",
+            "category": "trail running"
+          },
+          {
+            "product": "Yoga Mat",
+            "category": "yoga"
+          }
+        ],
+        "customerProfile": {
+          "preferences": "prefers lightweight gear for long-distance trail running",
+          "name": "Jamie",
+          "pastPurchases": [
+            "Trail Running Shoes",
+            "Hydration Vest",
+            "Merino Wool Socks"
+          ]
+        }
+      },
+      "type": "SET_VARIABLE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "stringify_context",
+      "taskReferenceName": "stringify_context_ref",
+      "inputParameters": {
+        "catalog": "${workflow.variables.catalog}",
+        "profile": "${workflow.variables.customerProfile}",
+        "queryExpression": "{profile: .profile, catalog: .catalog} | tojson"
+      },
+      "type": "JSON_JQ_TRANSFORM",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    },
+    {
+      "name": "recommend",
+      "taskReferenceName": "recommend_ref",
+      "inputParameters": {
+        "jsonOutput": true,
+        "llmProvider": "OpenAI",
+        "messages": [
+          {
+            "message": "Given a customer's profile and past purchases, and a product catalog, recommend the top 3 products from the catalog with a one-sentence reason each. Respond with a json object: {recommendations: [{product, reason}]}.",
+            "role": "system"
+          },
+          {
+            "message": "Here is the json context (profile and catalog):\n\n${stringify_context_ref.output.result}",
+            "role": "user"
+          }
+        ],
+        "model": "gpt-4o-mini",
+        "temperature": 0.5
+      },
+      "type": "LLM_CHAT_COMPLETE",
+      "decisionCases": {},
+      "defaultCase": [],
+      "forkTasks": [],
+      "startDelay": 0,
+      "joinOn": [],
+      "optional": false,
+      "defaultExclusiveJoinTask": [],
+      "asyncComplete": false,
+      "loopOver": [],
+      "onStateChange": {},
+      "permissive": false,
+      "metadata": {}
+    }
+  ],
+  "inputParameters": [],
+  "outputParameters": {
+    "recommendations": "${recommend_ref.output.result.recommendations}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "adrian.warman@orkes.io",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {},
+  "enforceSchema": true,
+  "metadata": {},
+  "maskedFields": []
+}

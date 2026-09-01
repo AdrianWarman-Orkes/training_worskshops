@@ -1,0 +1,124 @@
+{
+  "createTime": 1786399884871,
+  "updateTime": 1786401078248,
+  "createdBy": "USER:app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "updatedBy": "USER:app:e023dbdf-7f2d-4903-adb8-69745d0b7c4a",
+  "name": "order_approval_form",
+  "version": 1,
+  "jsonSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "type": "object",
+    "properties": {
+      "orderId": {
+        "type": "string"
+      },
+      "category": {
+        "type": "string"
+      },
+      "price": {
+        "type": "number"
+      },
+      "itemCount": {
+        "type": "number"
+      },
+      "discountPercent": {
+        "type": "string"
+      },
+      "shippingCharge": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "string",
+        "enum": [
+          "approve",
+          "reject"
+        ]
+      },
+      "comments": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "decision"
+    ]
+  },
+  "templateUI": {
+    "type": "VerticalLayout",
+    "elements": [
+      {
+        "type": "Group",
+        "label": "Order Details",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/orderId",
+            "label": "Order ID",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/category",
+            "label": "Category",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/price",
+            "label": "Price",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/itemCount",
+            "label": "Item Count",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/discountPercent",
+            "label": "Discount %",
+            "options": {
+              "readonly": true
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/shippingCharge",
+            "label": "Shipping Charge",
+            "options": {
+              "readonly": true
+            }
+          }
+        ]
+      },
+      {
+        "type": "Group",
+        "label": "Reviewer Decision",
+        "elements": [
+          {
+            "type": "Control",
+            "scope": "#/properties/decision",
+            "label": "Decision",
+            "options": {
+              "format": "radio"
+            }
+          },
+          {
+            "type": "Control",
+            "scope": "#/properties/comments",
+            "label": "Comments (optional)",
+            "options": {}
+          }
+        ]
+      }
+    ]
+  }
+}
